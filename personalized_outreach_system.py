@@ -1,4 +1,20 @@
+# -*- coding: utf-8 -*-
+
+# Commented out IPython magic to ensure Python compatibility.
 #install all packages
+!pip install langchain
+!pip install langchain-community
+!pip install langchain-openai
+!pip install cohere
+!pip install requests
+!pip install google-search-results
+!pip install langchainhub
+# %pip install --upgrade --quiet  "unstructured[all-docs]"
+!pip install fastapi
+!pip install kaleido
+!pip install uvicorn
+!pip install pydantic
+
 #import all libraries
 from langchain_community.utilities import GoogleSerperAPIWrapper
 from typing import Any, Dict, List, Optional
@@ -33,6 +49,8 @@ from langchain.chains import (
 from langchain.chains.summarize import load_summarize_chain
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 
+
+
 unique_id = uuid4().hex[0:8]
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_PROJECT"] = f"Tracing Walkthrough - {unique_id}"
@@ -43,12 +61,14 @@ from langsmith import Client
 
 client = Client()
 
+"""## Find LinkedIn Profile through Google (deprecated)"""
+
 #set your api-keys in an environment
 import os
 os.environ['SERPAPI_API_KEY']="2927372a3d32f8da15d1f67e8b210a17883779c5"
 
 
-os.environ['OPENAI_API_KEY']="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"
+os.environ['OPENAI_API_KEY']="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"
 
 os.environ['SERPER_API_KEY']="2927372a3d32f8da15d1f67e8b210a17883779c5"
 
@@ -87,7 +107,6 @@ def get_linkedin_profile_url(name: str):
 llm = ChatOpenAI(temperature=0)
 
 tools = [get_linkedin_profile_url]
-print(tools)
 
 template = """
             Your answer should only contain a linkedin profile url link.
@@ -121,11 +140,17 @@ agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_pa
 
 #TODO: Before running the next step, check if the leads csv contains a Linkedin_profile_url. If it doesn't, skip next step. If it does, make linkedin_profile_url = df['linkedin_profile_url']
 
-name = "Yann LeCun"
+"""## Retrieve LinkedIn profile, experience and recent posts through Relevance AI API"""
+
+name = "Kim Clark"
 linkedin_profile_url = agent_executor.invoke({"input": name})
 
 linkedin_profile = linkedin_profile_url['output']
 print(linkedin_profile)
+
+#OVERRIDE FOR EXAMPLES:
+linkedin_profile = "https://www.linkedin.com/in/kim-clark-52868894/"
+name = "Kim Clark"
 
 #Alejo:
 #Relevance AI LinkedIn Scraper
@@ -175,7 +200,7 @@ class PersonProfile(BaseModel):
 
 person_parser = PydanticOutputParser(pydantic_object=PersonProfile)
 
-template = """
+analyst_agent_template = """
 Given the LinkedIn information about a person, your task is to extract and structure the following details into a single valid JSON dictionary. Ensure the JSON dictionary strictly adheres to the format instructions provided, with each key mapping to a correctly formatted nested JSON dictionary or list as specified:
 
 full_name: The person's full name.
@@ -197,7 +222,7 @@ Your task is crucial for personalizing outreach efforts, so take time to think a
 
 
 linkedin_profile_template = PromptTemplate(
-    template=template,
+    template=analyst_agent_template,
     input_variables=["linkedin_information"],
     partial_variables={"format_instructions": person_parser.get_format_instructions()},
 )
@@ -208,10 +233,74 @@ chain = LLMChain(llm=llm, prompt=linkedin_profile_template)
 result = chain.run(linkedin_information=linkedin_data)
 pprint(result)
 
-loader = UnstructuredFileLoader("/content/sample_data/Fasterise_Knowledge_Base.txt")
+"""## Read Knowledge Base to understand how the profile is relevant to Fasterise and its Real Estate Products"""
+
+loader = UnstructuredFileLoader("/content/sample_data/Fasterise_Knowledge_Base_Real_Estate.txt")
+
+import numpy as np
+np.__version__
 
 docs = loader.load()
 docs = str(docs)
+
+docs = """
+# Fasterise Knowledge Base
+
+## Company Overview
+- **Purpose**: Leveraging AI to amplify human potential, with a focus on ethical AI use.
+
+## Team Composition
+- **Expertise**: Combines AI experts, programmers, marketers, real estate agents and mortgage lenders.
+
+## Challenges and Solutions
+- **Product Direction**: Identified AI impact areas in real estate.
+- **Ethics**: Prioritized human-amplifying projects, maintaining ethical standards.
+
+## Projects
+### Ski Chalet Concierge
+An AI-powered service that enhances vacation rental experiences by providing personalized recommendations, automating booking processes, and offering virtual concierge services to guests for a seamless stay. **For real estate agents, this tool can significantly improve client satisfaction and retention for vacation rental properties.**
+
+### Scheduler Assistant
+This tool streamlines employee scheduling in various industries by predicting optimal work schedules, thereby reducing manual efforts and improving efficiency. **Real estate agents can use it to optimize their viewings and meetings schedule, ensuring maximum productivity.**
+
+### Lead Qualifier
+An automated system that uses AI to qualify leads for businesses, prioritizing those most likely to convert. **This enables real estate agents to focus their efforts on high-potential clients, optimizing sales strategies.**
+
+### Zoom Transcriber to Pinecone Integration
+Captures and transcribes content from virtual meetings, making the data searchable. **This aids real estate agents in keeping track of client preferences and important discussion points for personalized follow-ups.**
+
+### Knowledge Base Builder
+Centralizes company knowledge into a single database, improving internal communication. **Real estate agencies can utilize this to streamline their operations and enhance the onboarding process for new agents.**
+
+### Massive Personalized Outreach System
+Personalizes client outreach at scale, improving engagement rates. **This system allows real estate agents to maintain personal connections with a large client base efficiently, enhancing relationship management.**
+
+### Administrative Automation Tools
+Reduces administrative tasks in real estate, including document management and client communication. **These tools help agents save time on paperwork, allowing them to focus more on client interaction and closing deals.**
+
+### Education-focused AI Solutions
+Focuses on personalized learning experiences in education. **While not directly related to real estate, these solutions highlight the potential of AI in personalizing services, a concept that can be applied to client interactions in real estate.**
+
+Each project's relevance to real estate agents showcases the potential of AI to streamline operations, enhance client relationships, and improve overall efficiency in the real estate industry.
+
+
+### Future Directions
+- **Innovation**: Continual exploration of AI's transformative potential.
+
+## Vision
+- **Adaptive Growth**: Staying ahead in AI development.
+- **Societal Impact**: Ethically deploying AI to enhance society.
+
+## Engagement and Security
+- **Marketing**: Uses video content and LinkedIn for engagement.
+- **Ethics and Security**: Emphasizes data privacy and secure storage solutions.
+
+## Conclusion
+- **Ongoing Development**: Refines AI solutions based on feedback.
+- **Community Engagement**: Uses workshops and webinars for better understanding needs.
+
+This concise knowledge base provides a clear overview of Fasterise's objectives, projects, and ethical stance, as well as how their work is directly relevant to improving the success of Real Estate agents.
+"""
 
 text_splitter = RecursiveCharacterTextSplitter(
     # Set a really small chunk size, just to show.
@@ -225,6 +314,8 @@ document = text_splitter.create_documents(texts)
 
 len(texts)
 
+"""## Qualify Lead"""
+
 @tool
 def qualify_lead(query: str):
   "useful when evaluating and identifying if a person is a perfect match for our company based of our knowledge base "
@@ -236,7 +327,7 @@ llm = ChatOpenAI(temperature=0, model="gpt-4-0125-preview")
 tools = [get_linkedin_profile_url]
 tools = tools + [qualify_lead]
 
-qualifier_template = """ You are a Relevance Analyst and Matchmaker with deep understaning of the artifical inteliegnce AI sector
+qualifier_agent_template = """ You are a Relevance Analyst and Matchmaker with deep understaning of the artifical inteliegnce AI sector
                 your role is to Carefully review the information of the person
                 assess how significance the person is in artificial intelligence
                 using critical thinking analyze how person information aligns with our company goals which is a artificial intelligence (AI) solution company
@@ -266,7 +357,7 @@ qualifier_template = """ You are a Relevance Analyst and Matchmaker with deep un
 
 
 
-qualifier_prompt = PromptTemplate.from_template(template=qualifier_template, MessagesPlaceholder=["agent_scratchpad","summary", "document"])
+qualifier_prompt = PromptTemplate.from_template(template=qualifier_agent_template, MessagesPlaceholder=["agent_scratchpad","summary", "document"])
 
 agent = create_react_agent(llm=llm, tools=tools, prompt=qualifier_prompt)
 
@@ -274,23 +365,25 @@ agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_pa
 
 qualified_result = agent_executor.invoke({"input":result, "document":document})
 
-map_prompt= """ write a summary of the following text:
+summarize_agent_prompt= """ write a summary of the following text:
 "{document}"
 SUMMARY:"""
 
-map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["document"])
+map_prompt_template = PromptTemplate(template=summarize_agent_prompt, input_variables=["document"])
 llm_chain = LLMChain(llm=llm,prompt=map_prompt_template)
 stuff_chain= StuffDocumentsChain(llm_chain=llm_chain, document_variable_name="document")
 summarized = stuff_chain.run(document)
 print(summarized)
 
+"""## Ice Breakers / Hook creation based on LinkedIn profile info"""
+
 @tool
 def ice_breakers_first_line(input: str) -> str:
-  """useful when creating icebreakers based on linkedin profile information, the icebreaker is to initiating conversations with professionals."""
+  """useful for creating icebreakers based on linkedin profile information, the icebreaker is for initiating conversations with professionals."""
   profile_information = result
   return profile_information
 
-ice_breaker_template =  """ You are a Ice Breakers Generator, your role is to create personalized and engaging ice breakers for initiating conversations with professionals, based on their LinkedIn profile information . These ice breakers should foster meaningful connections, reflecting the individual's professional background, interests, and communication preferences.
+ice_breaker_agent_template =  """ You are a Ice Breakers Generator, your role is to create personalized and engaging ice breakers for initiating conversations with professionals, based on their LinkedIn profile information . These ice breakers should foster meaningful connections, reflecting the individual's professional background, interests, and communication preferences.
 you should use Information extracted from the LinkedIn profile, including full name, introduction, projects, experience, topics of interest, and any other relevant details.
 Cultural and Contextual Considerations: Background information that might influence the appropriateness of certain ice breakers, including industry norms, cultural nuances, and recent professional achievements.
 
@@ -333,26 +426,131 @@ Question: {input}
 """
 
 
-icebreaker_prompt =  PromptTemplate(template=ice_breaker_template, input_variables=["input","profile_data"])
+icebreaker_prompt =  PromptTemplate(template=ice_breaker_agent_template, input_variables=["input","profile_data"])
 
 llm = ChatOpenAI(temperature=0, model="gpt-4-0125-preview")
 chain = LLMChain(llm=llm, prompt=icebreaker_prompt)
 
-icebreaker_result = chain.run(input= "draft a icebreaker", profile_data = result )
+icebreaker_result = chain.run(input= "create effective icebreakers", profile_data = result )
 
 print(icebreaker_result)
 
+"""## Upload Icebreakers to Airtable"""
+
+!pip install pyairtable
+
+import os
+from pyairtable import Api
+
+airtable_key = 'pato8cChB3wsNWWyG.c8cea7e3657770665e0400a6dfd1819c9ebe01e606688294152e78f190e9a2a7'
+airtable_api = Api(airtable_key)
+table = airtable_api.table('app4ngdBC3uyeutjO', 'tbltpU7zNum9axElY')
+
+
+
+import os
+import requests
+import time
+from datetime import date
+
+airtable_key = 'pato8cChB3wsNWWyG.c8cea7e3657770665e0400a6dfd1819c9ebe01e606688294152e78f190e9a2a7'
+airtable_api = Api(airtable_key)
+
+icebreakers_table = airtable_api.table('app4ngdBC3uyeutjO', 'tbltpU7zNum9axElY') #/Ice_Breakers'
+emails_table = airtable_api.table('app4ngdBC3uyeutjO', 'tbl6TmlXJj90bOFaZ') #/Emails'
+
+
+
+
+# Add Icebreaker to Airtable
+def icebreaker_post_to_airtable(icebreaker,
+                      prompt,
+                      gold_nuggets,
+                      lead_qualification_reasons,
+                      linkedin_profile_data,
+                      #agent,
+                      linkedin_link,
+                      email_address="None"):
+
+    print(icebreakers_table.all())
+
+
+    data = {
+                "Icebreaker": icebreaker,
+                "Prompt": prompt,
+                "Gold Nuggets": gold_nuggets,
+                "Lead Qualification Reasons": lead_qualification_reasons,
+                "Profile Data": linkedin_profile_data,
+                "Agent": "gpt-4-0125-preview",
+                "Date": str(date.today()),
+                "LinkedIn Link": linkedin_link,
+                "Email": email_address #{email_address or "None"}
+    }
+
+    try:
+      icebreakers_table.create(data)
+    except Exception as e:
+      print("ERROR: ", e)
+
+    return data
+
+
+# Add time off to Unavailability table
+def email_draft_post_to_airtable(email_draft,
+                                 icebreaker,
+                                  prompt,
+                                  gold_nuggets,
+                                  lead_qualification_reasons,
+                                  linkedin_profile_data,
+                                  #agent,
+                                  linkedin_link,
+                                  email_address):
+    # Get Unavailability data from airtable
+    headers = {
+        'Authorization': f'Bearer {airtable_key}',
+        'Content-Type': 'application/json'
+    }
+    data = {
+        "records": [
+            {
+            "fields": {
+                "Email Draft": email_draft,
+                "Prompt": prompt,
+                "Agent": "gpt-4-0125-preview",
+                #"Date": date.today(),
+                "LinkedIn Link": linkedin_link,
+                #"Email": {email_address or "None"}
+            }
+            }
+        ]
+    }
+    response = requests.post(emails_tbl_url, headers=headers, json=data)
+    response.raise_for_status()
+
+#@title Upload Icebreakers to Airtable
+icebreaker_post_to_airtable(icebreaker=str(icebreaker_result),
+                      prompt=str(ice_breaker_template),
+                      gold_nuggets=str(qualified_result),
+                      lead_qualification_reasons=str(qualified_result),
+                      linkedin_profile_data=str(linkedin_data),
+                      #agent=llm,
+                      linkedin_link=str(linkedin_profile_url))
+
+
+
+"""## Draft Email based on prospect profile"""
+
 @tool
-def Draft_email(input: str) -> str:
+def Draft_email(text: str) -> str:
     """
-    Expects input as the name of the person and outputs information about a receipent from their linkeldin profile that would be used to create a personalised email.
+    useful when you need gather information about a recipient professional background. expects the input as an empty str ''
     """
     report = qualified_result
     return report
 
 @tool
 def icebreaker(text:str)-> str:
-  """ useful when you want to draft email and needs icebreakers about a recipient to create a personalized introduction"""
+  """ useful when you want to draft email and needs icebreakers about a recipient to create a personalized introduction, expects input as an empty string"""
 
   email = icebreaker_result
 
@@ -360,26 +558,20 @@ def icebreaker(text:str)-> str:
 
 llm = ChatOpenAI(temperature=0,model="gpt-4-0125-preview")
 
-tools = [get_linkedin_profile_url]
-tools = tools + [Draft_email]+[icebreaker]
+tools =  [Draft_email,icebreaker]
 
-email_template = """ You are a Copywriter, your role is to use create enaging and personalized and human like outreach email content that aligns with both a recipient's professional information  and our company's objectives. you must use icebreakers to start the introduction of the email, information you have about our company and relevance and matchmaking report about the recipient.
-
-Start the email by using an icebreakers as the introduction to the email then proceed to by using the relevance and matchmaking report and information you know about our company to  draft a personalized email.  The email must highlights the synergy between the recipient's expertise and our company's initiatives, particularly focusing on areas like innovation in digital solutions
+email_agent_template = """ You are a email copywriter, your role is write personalised outreach email to a potential client based on the professional information you have about the client, icebreaker about the client and knowledge you have about our company.
+The email should highlights the synergy between the client expertise and our company's initiatives.
 Maintain a respectful and professional tone throughout the email, ensuring the content is engaging and reflects positively on our company.
 Prioritize clarity and conciseness, avoiding overly technical jargon unless it's relevant to the recipient's background
+
 {tools}
 always include the knowledge you have about company when drafting the email for example you can add our company name or any other information that is important to make email more personalised.
 Here is more information about our company: {summarized}
-Output Format
-Generate a personalized outreach email that includes:
-An introduction that use  one of the icebreakers.
-A section  that acknowledges the recipient's professional background and achievements using information
-A section detailing the potential synergy between the recipient's expertise and our company's strategic goals.
-A personalized invitation to explore partnership or collaboration opportunities, specifying the mutual benefits.
-A conclusion that reiterates the value of the recipient's contributions to the field and expresses enthusiasm for potential collaboration
 
-###use the recipient's name in case where necessary###
+
+###use the client's name in case where necessary###
+
 
 Use the following format:
 
@@ -402,7 +594,7 @@ Use the following format:
 
 
 
-email_prompt = PromptTemplate.from_template(template=email_template, MessagesPlaceholder=["agent_scratchpad", "input", "summarized"])
+email_prompt = PromptTemplate.from_template(template=email_agent_template, MessagesPlaceholder=["agent_scratchpad", "input", "summarized"])
 
 agent = create_react_agent(llm=llm, tools=tools, prompt=email_prompt)
 
@@ -414,10 +606,12 @@ email_output = email_result['output']
 
 print(email_output)
 
+"""## Critic Agent to evaluate how human the email sounds, how well it flows, and how relevant it is to the prospect's profile"""
+
 @tool
 def email_critic(input: str) -> str:
     """
-    useful when you want to evaluate if the email sounds personalised and the information match our company"
+    useful when you want to evaluate if the email sounds human, personalised and the information matches our company projects and value offer"
     """
     email = email_output
     return email
@@ -427,7 +621,7 @@ llm = ChatOpenAI(temperature=0)
 tools = [get_linkedin_profile_url]
 tools = tools + [Draft_email]+[icebreaker]+[email_critic]
 
-critic_template = """ You are a email editor and communication specialist,combining your expertise in effective business communication with a deep understanding of personalized marketing strategies and  skills at identifying areas for improvement in written content.
+critic_agent_template = """ You are a email editor and communication specialist,combining your expertise in effective business communication with a deep understanding of personalized marketing strategies and  skills at identifying areas for improvement in written content.
                       your job is to review the email ensuring the email draft that is provided are both compelling and reflective of genuine human interaction.
 
                      {tools}
@@ -466,106 +660,12 @@ critic_template = """ You are a email editor and communication specialist,combin
 
 
 
-critic_prompt = PromptTemplate.from_template(template=critic_template, MessagesPlaceholder=["agent_scratchpad", "input", "summarized"])
+critic_prompt = PromptTemplate.from_template(template=critic_agent_template, MessagesPlaceholder=["agent_scratchpad", "input", "summarized"])
 
 agent = create_react_agent(llm=llm, tools=tools, prompt=critic_prompt)
 
 agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, max_interaction=1, handle_parsing_errors=True)
 
-critic_result = agent_executor.invoke({"input":"How is the quality of the email", "summarized":summarized})
+critic_result = agent_executor.invoke({"input":"Evaluate and be critical about the quality of the email, including the icebreaker, relevance to prospect and the flow and human-sounding of the email,", "summarized":summarized})
 
-
-
-#Previos code - delete
-
-linkedin_data= scrape_linkedin_profile(linkedin_profile=linkedin_profile)
-
-def scrape_linkedin_profile(linkedin_profile: str):
-    ''' Getting LinkedIn profile data by Nubela's ProxyCurl API'''
-    api_endpoint = "https://nubela.co/proxycurl/api/v2/linkedin"
-
-    response = requests.get(
-        api_endpoint,
-        params={"url": linkedin_profile},
-        headers={"Authorization": f"Bearer {os.getenv('PROXY_CURL_API')}"}
-    )
-
-    # Example data structure template for processing LinkedIn profile data
-    linkedin_profile_template = {
-        "public_identifier": None,
-        "profile_pic_url": None,
-        "background_cover_image_url": None,
-        "first_name": None,
-        "last_name": None,
-        "full_name": None,
-        "occupation": None,
-        "headline": None,
-        "summary": None,
-        "country": None,
-        "country_full_name": None,
-        "city": None,
-        "state": None,
-        "experiences": [
-            {
-                "starts_at": {
-                    "day": None,
-                    "month": None,
-                    "year": None
-                },
-                "ends_at": None,
-                "company": None,
-                "company_linkedin_profile_url": None,
-                "title": None,
-                "description": None,
-                "location": None,
-                "logo_url": None
-            },
-            # Additional experience entries as needed
-        ],
-        "education": [
-            {
-                "starts_at": {
-                    "day": None,
-                    "month": None,
-                    "year": None
-                },
-                "ends_at": {
-                    "day": None,
-                    "month": None,
-                    "year": None
-                },
-                "field_of_study": None,
-                "degree_name": None,
-                "school": None,
-                "description": None,
-                "logo_url": None
-            },
-            # Additional education entries as needed
-        ],
-        "languages": [],
-        "accomplishment_organisations": [],
-        "accomplishment_publications": [],
-        "accomplishment_honors_awards": [],
-        "accomplishment_patents": [],
-        "accomplishment_courses": [],
-        "accomplishment_projects": [],
-        "accomplishment_test_scores": [],
-        "volunteer_work": [],
-        "certifications": [],
-        "connections": None,
-        "people_also_viewed": [],
-        "recommendations": [],
-        "activities": []
-    }
-
-    data = response.json()
-    pprint(data)
-    include_keys = linkedin_profile_template.keys()  # Assuming you want to include all keys from the template
-    filtered_data = {
-        key: value
-        for key, value in data.items()
-        if key in include_keys and value not in ([],"","",None)
-    }
-    return filtered_data
-
-os.environ['PROXY_CURL_API']="gdAnY1kOb6CbYxicjYmtuA"
+"""## TODO: Iterate on Writer Agent to write the final version taking in all the information so far"""
