@@ -1,0 +1,11 @@
+langchain
+langchain-community
+langchain-openai
+cohere
+requests
+google-search-results
+langchainhub
+fastapi
+uvicorn
+pydantic
+pyairtable
